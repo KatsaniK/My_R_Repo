@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Υπολογιστής Φόρου Εισοδήματος 2026</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Υπολογιστής Φόρου Εισοδήματος (2026)</h1>
+    <p class="intro">
+      Συμπληρώστε το φορολογητέο εισόδημα, την ηλικία και τον αριθμό τέκνων για να υπολογίσετε
+      τον εκτιμώμενο φόρο με βάση τις κλίμακες του 2026.
+    </p>
+
+    <form id="tax-form" class="card">
+      <div class="form-row-group">
+        <div class="form-row">
+          <label for="income">Φορολογητέο εισόδημα (€)</label>
+          <input type="number" id="income" min="0" step="100" required>
+        </div>
+
+        <div class="form-row">
+          <label for="age">Ηλικία (έτη)</label>
+          <input type="number" id="age" min="0" step="1" required>
+        </div>
+
+        <div class="form-row">
+          <label for="children">Αριθμός τέκνων</label>
+          <input type="number" id="children" min="0" step="1" value="0" required>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Υπολογισμός</button>
+        <button type="button" id="reset">Επαναφορά</button>
+      </div>
+    </form>
+
+    <section id="results" class="card hidden">
+      <h2>Αποτελέσματα</h2>
+      <p class="summary">
+        Συνολικός φόρος: <strong id="total-tax">–</strong><br>
+        Μέσος φορολογικός συντελεστής: <strong id="effective-rate">–</strong>
+      </p>
+
+      <p class="note">
+        Ο υπολογισμός γίνεται προοδευτικά ανά κλιμάκιο και ενημερώνεται αυτόματα καθώς
+        τροποποιείτε τα πεδία εισόδου.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Κλιμάκιο</th>
+              <th>Ποσοστό</th>
+              <th>Ποσό εισοδήματος</th>
+              <th>Φόρος</th>
+            </tr>
+          </thead>
+          <tbody id="breakdown"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Πηγή: Ενδεικτικές κλίμακες φορολογίας εισοδήματος 2026.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
