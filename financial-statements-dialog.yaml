@@ -1,0 +1,421 @@
+kind: AdaptiveDialog
+modelDescription: |-
+  Δημιούργησε ισολογισμό
+  Δημιουργία ισολογισμού
+  Ανάλυση ισοζυγίου
+  Παραγωγή οικονομικών καταστάσεων
+  Θέλω να φτιάξω ισολογισμό
+  Financial statements
+  Create balance sheet
+  Οικονομικές καταστάσεις
+  Κάνε μου ισολογισμό
+  Επεξεργασία ισοζυγίου
+  Ισολογισμός και αποτελέσματα
+  Κάνε μου τις οικονομικές καταστάσεις
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    # Node 1: Welcome Message
+    - kind: SendActivity
+      id: sendActivity_Welcome
+      activity: |-
+        **Τέλεια**! Θα δημιουργήσω τις οικονομικές καταστάσεις σας. 📊
+
+        Η διαδικασία περιλαμβάνει:
+        1️⃣ Ανέβασμα του ισοζυγίου
+        2️⃣ Επιλογή περιόδου αναφοράς
+        3️⃣ Επεξεργασία και αντιστοίχιση
+        4️⃣ Δημιουργία τελικών καταστάσεων
+
+        Ας ξεκινήσουμε!
+
+    # Node 2: Ask for Period
+    - kind: QuestionActivity
+      id: askPeriod
+      question: |-
+        📅 Για ποια περίοδο θέλετε να δημιουργήσω τις καταστάσεις;
+      variableId: Topic.SelectedPeriod
+      choiceType: choice
+      choices:
+        - Q1 2024
+        - Q2 2024
+        - Q3 2024
+        - Q4 2024
+        - Έτος 2024
+        - Έτος 2023
+        - Άλλη περίοδος
+      appendChoices: false
+      output:
+        property: Topic.SelectedPeriod
+
+    # Node 3: Check if custom period
+    - kind: ConditionGroup
+      id: checkCustomPeriod
+      conditions:
+        - kind: Condition
+          id: ifCustomPeriod
+          condition: =Topic.SelectedPeriod = "Άλλη περίοδος"
+          actions:
+            # Ask for custom period input
+            - kind: QuestionActivity
+              id: askCustomPeriod
+              question: |-
+                Παρακαλώ γράψτε την περίοδο που θέλετε (π.χ. "Q1 2023", "Ιανουάριος 2024", "2022"):
+              variableId: Topic.CustomPeriod
+              valueType: string
+              output:
+                property: Topic.CustomPeriod
+
+            # Set the selected period to custom value
+            - kind: SetVariable
+              id: setCustomPeriod
+              variable: Topic.SelectedPeriod
+              value: =Topic.CustomPeriod
+
+    # Node 4: Ask for Statement Types
+    - kind: SendActivity
+      id: sendActivity_AskTypes
+      activity: |-
+        📋 Ποιες καταστάσεις θέλετε να δημιουργήσω;
+
+        Μπορείτε να επιλέξετε περισσότερες από μία:
+        ✅ Ισολογισμός
+        ✅ Αποτελέσματα Χρήσης
+        ✅ Ταμειακές Ροές
+        ✅ Δείκτες Ρευστότητας & Αποδοτικότητας
+
+    # Node 5: Multiple choice for statement types
+    - kind: QuestionActivity
+      id: askStatementTypes
+      question: Επιλέξτε τις καταστάσεις που θέλετε:
+      variableId: Topic.StatementTypes
+      choiceType: multiChoice
+      choices:
+        - Ισολογισμός
+        - Αποτελέσματα Χρήσης
+        - Ταμειακές Ροές
+        - Οικονομικοί Δείκτες
+        - Όλες τις καταστάσεις
+      output:
+        property: Topic.StatementTypes
+
+    # Node 6: Ask for Trial Balance File
+    - kind: SendActivity
+      id: sendActivity_FileRequest
+      activity: |-
+        📁 Τώρα θα χρειαστώ το αρχείο ισοζυγίου σας.
+
+        **Βεβαιωθείτε ότι το αρχείο περιέχει:**
+        ✔️ Κωδικούς λογαριασμών
+        ✔️ Περιγραφές λογαριασμών
+        ✔️ Χρεωστικά υπόλοιπα
+        ✔️ Πιστωτικά υπόλοιπα
+
+        **Αποδεκτές μορφές:** Excel (.xlsx, .xls) ή CSV
+
+    # Node 7: File Upload
+    - kind: QuestionActivity
+      id: uploadTrialBalance
+      question: Παρακαλώ ανεβάστε το αρχείο ισοζυγίου:
+      variableId: Topic.TrialBalanceFile
+      valueType: attachment
+      output:
+        property: Topic.TrialBalanceFile
+
+    # Node 8: Validate File
+    - kind: ConditionGroup
+      id: validateFile
+      conditions:
+        # Check if file was uploaded
+        - kind: Condition
+          id: checkFileExists
+          condition: =IsBlank(Topic.TrialBalanceFile)
+          actions:
+            - kind: SendActivity
+              id: sendActivity_NoFile
+              activity: |-
+                ⚠️ Δεν έλαβα κανένα αρχείο. Παρακαλώ προσπαθήστε ξανά να ανεβάσετε το ισοζύγιο.
+
+            # Go back to file upload
+            - kind: GotoAction
+              id: gotoFileUpload
+              actionId: uploadTrialBalance
+
+        # File exists - continue processing
+        - kind: Condition
+          id: fileExists
+          condition: =!IsBlank(Topic.TrialBalanceFile)
+          elseActions:
+            - kind: SendActivity
+              id: sendActivity_FileReceived
+              activity: |-
+                ✅ Έλαβα το αρχείο: **{Topic.TrialBalanceFile.name}**
+
+                🔄 Επεξεργάζομαι τα δεδομένα...
+                Αυτό μπορεί να πάρει 30-60 δευτερόλεπτα.
+
+    # Node 9: Ask for additional options
+    - kind: QuestionActivity
+      id: askOptions
+      question: Θέλετε κάποια από τις παρακάτω επιπλέον επιλογές;
+      variableId: Topic.AdditionalOptions
+      choiceType: multiChoice
+      choices:
+        - Σύγκριση με προηγούμενη χρήση
+        - Γραφήματα και διαγράμματα
+        - Αναλυτική ανάλυση δεικτών
+        - Σχόλια και παρατηρήσεις
+        - Καμία επιπλέον επιλογή
+      output:
+        property: Topic.AdditionalOptions
+
+    # Node 10: Confirm Processing
+    - kind: SendActivity
+      id: sendActivity_Confirm
+      activity: |-
+        📊 **Σύνοψη του αιτήματός σας:**
+
+        📅 **Περίοδος:** {Topic.SelectedPeriod}
+        📋 **Καταστάσεις:** {Topic.StatementTypes}
+        📁 **Αρχείο:** {Topic.TrialBalanceFile.name}
+        ⚙️ **Επιπλέον επιλογές:** {Topic.AdditionalOptions}
+
+        Είμαστε έτοιμοι να ξεκινήσουμε την επεξεργασία!
+
+    # Node 11: Final confirmation
+    - kind: QuestionActivity
+      id: askFinalConfirm
+      question: Θέλετε να προχωρήσω με τη δημιουργία των καταστάσεων;
+      variableId: Topic.FinalConfirmation
+      choiceType: choice
+      choices:
+        - Ναι, προχώρησε
+        - Όχι, θέλω να αλλάξω κάτι
+        - Ακύρωση
+      output:
+        property: Topic.FinalConfirmation
+
+    # Node 12: Process based on confirmation
+    - kind: ConditionGroup
+      id: processConfirmation
+      conditions:
+        # User confirmed - proceed
+        - kind: Condition
+          id: ifConfirmed
+          condition: =Topic.FinalConfirmation = "Ναι, προχώρησε"
+          actions:
+            # Call Power Automate Flow
+            # IMPORTANT: Replace the flowId below with your actual Power Automate Flow ID (GUID format)
+            # To find your Flow ID: Go to Power Automate > Your Flow > Flow Details > Flow ID
+            - kind: InvokeFlowAction
+              id: callPowerAutomate
+              flowId: 00000000-0000-0000-0000-000000000000  # REPLACE with your actual Flow ID GUID
+              input:
+                TrialBalanceFile: =Topic.TrialBalanceFile
+                Period: =Topic.SelectedPeriod
+                StatementTypes: =Topic.StatementTypes
+                AdditionalOptions: =Topic.AdditionalOptions
+                UserEmail: =System.User.Email
+              output:
+                property: Topic.FlowResult
+
+            # Show success message
+            - kind: SendActivity
+              id: sendActivity_Success
+              activity: |-
+                ✅ **Επιτυχής Δημιουργία Οικονομικών Καταστάσεων!**
+
+                📥 Τα αρχεία σας είναι έτοιμα:
+                - 📊 Ισολογισμός_{Topic.SelectedPeriod}.xlsx
+                - 📈 Αποτελέσματα_Χρήσης_{Topic.SelectedPeriod}.xlsx
+                - 📉 Δείκτες_{Topic.SelectedPeriod}.xlsx
+
+                📧 Τα αρχεία θα σταλούν και στο email: **{System.User.Email}**
+
+                Θέλετε να κάνετε κάτι άλλο;
+
+        # User wants changes
+        - kind: Condition
+          id: ifChanges
+          condition: =Topic.FinalConfirmation = "Όχι, θέλω να αλλάξω κάτι"
+          actions:
+            - kind: QuestionActivity
+              id: askWhatToChange
+              question: Τι θέλετε να αλλάξετε;
+              variableId: Topic.ChangeRequest
+              choiceType: choice
+              choices:
+                - Την περίοδο
+                - Τις καταστάσεις
+                - Το αρχείο
+                - Τις επιπλέον επιλογές
+              output:
+                property: Topic.ChangeRequest
+
+            # Route based on change request
+            - kind: ConditionGroup
+              id: routeChanges
+              conditions:
+                - kind: Condition
+                  id: changePeriod
+                  condition: =Topic.ChangeRequest = "Την περίοδο"
+                  actions:
+                    - kind: GotoAction
+                      id: gotoPeriod
+                      actionId: askPeriod
+
+                - kind: Condition
+                  id: changeStatements
+                  condition: =Topic.ChangeRequest = "Τις καταστάσεις"
+                  actions:
+                    - kind: GotoAction
+                      id: gotoStatements
+                      actionId: askStatementTypes
+
+                - kind: Condition
+                  id: changeFile
+                  condition: =Topic.ChangeRequest = "Το αρχείο"
+                  actions:
+                    - kind: GotoAction
+                      id: gotoFile
+                      actionId: uploadTrialBalance
+
+        # User cancelled
+        - kind: Condition
+          id: ifCancelled
+          condition: =Topic.FinalConfirmation = "Ακύρωση"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Cancel
+              activity: |-
+                ❌ Η διαδικασία ακυρώθηκε.
+
+                Αν χρειαστείτε βοήθεια αργότερα, απλά πείτε "Δημιούργησε ισολογισμό".
+
+                Καλή συνέχεια!
+
+    # Node 13: Ask for next action
+    - kind: QuestionActivity
+      id: askNextAction
+      question: Τι θα θέλατε να κάνετε τώρα;
+      variableId: Topic.NextAction
+      choiceType: choice
+      choices:
+        - Δημιουργία νέων καταστάσεων
+        - Λήψη των αρχείων
+        - Βοήθεια με τους δείκτες
+        - Τέλος
+      output:
+        property: Topic.NextAction
+
+    # Node 14: Handle next action
+    - kind: ConditionGroup
+      id: handleNextAction
+      conditions:
+        - kind: Condition
+          id: ifNewStatements
+          condition: =Topic.NextAction = "Δημιουργία νέων καταστάσεων"
+          actions:
+            # Reset variables
+            - kind: SetVariable
+              id: resetPeriod
+              variable: Topic.SelectedPeriod
+              value: =""
+
+            # Start over
+            - kind: GotoAction
+              id: startOver
+              actionId: sendActivity_Welcome
+
+        - kind: Condition
+          id: ifDownload
+          condition: =Topic.NextAction = "Λήψη των αρχείων"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Download
+              activity: |-
+                📥 **Τα αρχεία σας:**
+
+                🔗 [Ισολογισμός](link-to-file)
+                🔗 [Αποτελέσματα Χρήσης](link-to-file)
+                🔗 [Οικονομικοί Δείκτες](link-to-file)
+
+                💡 Tip: Ελέγξτε και το email σας!
+
+        - kind: Condition
+          id: ifHelp
+          condition: =Topic.NextAction = "Βοήθεια με τους δείκτες"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Help
+              activity: |-
+                📊 **Επεξήγηση Βασικών Δεικτών:**
+
+                **🔹 Γενική Ρευστότητα:** Κυκλοφορούν Ενεργητικό / Βραχυπρόθεσμες Υποχρεώσεις
+                - Ιδανική τιμή: > 1.5
+
+                **🔹 ROE (Αποδοτικότητα Ιδίων Κεφαλαίων):** Καθαρά Κέρδη / Ίδια Κεφάλαια
+                - Καλή τιμή: > 10%
+
+                **🔹 ROA (Αποδοτικότητα Ενεργητικού):** Καθαρά Κέρδη / Σύνολο Ενεργητικού
+                - Καλή τιμή: > 5%
+
+                Θέλετε περισσότερες πληροφορίες για κάποιον συγκεκριμένο δείκτη;
+
+        - kind: Condition
+          id: ifEnd
+          condition: =Topic.NextAction = "Τέλος"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Goodbye
+              activity: |-
+                👋 Ευχαριστώ που χρησιμοποιήσατε τον Οικονομικό Βοηθό!
+
+                📊 Τα αρχεία σας έχουν σταλεί στο email σας.
+
+                Για νέες καταστάσεις, απλά πείτε "Δημιούργησε ισολογισμό".
+
+                Καλή συνέχεια! 🎯
+
+# Variables Declaration
+variables:
+  - id: Topic.SelectedPeriod
+    displayName: Επιλεγμένη Περίοδος
+    dataType: string
+
+  - id: Topic.CustomPeriod
+    displayName: Προσαρμοσμένη Περίοδος
+    dataType: string
+
+  - id: Topic.StatementTypes
+    displayName: Τύποι Καταστάσεων
+    dataType: string
+
+  - id: Topic.TrialBalanceFile
+    displayName: Αρχείο Ισοζυγίου
+    dataType: attachment
+
+  - id: Topic.AdditionalOptions
+    displayName: Επιπλέον Επιλογές
+    dataType: string
+
+  - id: Topic.FinalConfirmation
+    displayName: Τελική Επιβεβαίωση
+    dataType: string
+
+  - id: Topic.FlowResult
+    displayName: Αποτέλεσμα Flow
+    dataType: object
+
+  - id: Topic.ChangeRequest
+    displayName: Αίτημα Αλλαγής
+    dataType: string
+
+  - id: Topic.NextAction
+    displayName: Επόμενη Ενέργεια
+    dataType: string
+
+inputType: {}
+outputType: {}
